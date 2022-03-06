@@ -1,0 +1,462 @@
+---
+title: "Stat Modelling : Assignment-3"
+author: "Abhishek Yadav, Tauras Marwaha, Devang Joshi, Hari Vuppala, Sai Krishna Meghana Yendamuri"
+date: "2/25/2022"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+
+### Importing Libraries
+```{r}
+library(tidyverse)
+library(gridExtra)
+library(corrplot)
+library(vip)
+library(pdp)
+library(rms)
+library(ggplot2)
+library(ggcorrplot)
+```
+
+
+### Importing the Wine data
+
+```{r}
+wine_data <- read.csv(file= "/Users/devangjoshi/Downloads/wine.csv", header = T)
+head(wine_data)
+```
+
+
+
+### Subsetting the data for Red Wine only
+
+```{r}
+wine_data <- wine_data[wine_data$type== 'red',]
+```
+
+
+### Checking distribution of "quality"
+
+```{r}
+ggplot(wine_data, aes(x=quality)) + geom_histogram(binwidth=.5)
+```
+
+- The above bar chart visualization shows distribution for quality variable.
+- We can see that the distribution of the response variable i.e quality is discrete and also appears to be normally distributed, but not continous
+- Since the response variable is discrete, so we will start by fitting a basic logistic regression model to predict the wine quality.
+
+
+### Exploring the data using summary statistics and graphics and checking the association of variables with response variable 'quality'.
+
+```{r}
+str(wine_data)
+
+summary(wine_data)
+```
+
+
+### Univartiate plots for all variables
+
+```{r}
+#Plot for quality
+ggplot(data = wine_data, aes(x = quality)) + geom_bar(width = 1, color = 'grey')
+```
+
+### The distribution of Fixed Acidity is positively skewed.
+
+```{r}
+
+ggplot(wine_data, aes( x = 1, y = fixed.acidity ) ) + geom_boxplot(alpha = 0.2, color = 'red' ) + scale_y_continuous(lim = c(4,14))
+             
+ggplot(data = wine_data, aes(x = fixed.acidity)) + geom_histogram(binwidth = 1, color = 'black', fill = 'grey') + scale_x_continuous(lim = c(4,14))
+```
+
+
+### The distribution of Volatile acidity looks like Bimodal with two peaks around 0.4 and 0.6.
+
+```{r}
+ggplot(wine_data, aes( x = 1, y = volatile.acidity ) ) + geom_boxplot(alpha = 0.2, color = 'red' ) + scale_y_continuous(lim = c(0,1))
+
+ggplot(data = wine_data, aes(x = volatile.acidity)) + geom_histogram(binwidth = 0.05, color = 'black',fill = 'grey') + scale_x_continuous(lim = c(0,1))
+
+```
+
+### The frequency of citric.acid in the distribution chart looks erratic and does not seem to follow any specific distribution.
+
+```{r}
+ggplot(wine_data, aes( x = 1, y = citric.acid )) + geom_boxplot(alpha = 0.2, color = 'red' )
+
+ggplot(data = wine_data, aes(x = citric.acid)) + geom_histogram(binwidth = 0.08, color = 'black',fill = 'grey') +
+  scale_x_continuous(breaks = seq(0,1,0.1), lim = c(0,1))
+```
+
+### The distribution of Residual Sugar is again positively skewed with high peaks at around 2 with many outliers present at the higher ranges.
+
+```{r}
+ggplot(wine_data, aes( x = 1, y = residual.sugar )) + geom_boxplot(alpha = 0.2, color = 'red' ) + scale_y_continuous(lim = c(1,8))
+
+ggplot(data = wine_data, aes(x = residual.sugar)) + geom_histogram(binwidth = 0.1, color = 'black',fill = 'grey') +
+  scale_x_continuous(lim = c(1,8))
+```
+
+### Chlorides also follow similar distribution like Residual Sugar.
+
+```{r}
+ggplot(wine_data, aes( x = 1, y = chlorides )) + geom_boxplot(alpha = 0.2, color = 'red' ) + scale_y_continuous(lim = c(0,0.3))
+
+ggplot(data = wine_data, aes(x = chlorides)) + geom_histogram(binwidth = 0.01, color = 'black',fill = 'grey') +
+  scale_x_continuous(lim = c(0,0.3))
+```
+
+### For Free Sulphur Dioxide, there is a high peak at 7 but then it again follows the same positively skewed long tailed patterns with some outliers in the high range.
+
+```{r}
+ggplot(wine_data, aes( x = 1, y = free.sulfur.dioxide )) + geom_boxplot(alpha = 0.2, color = 'red' ) + scale_y_continuous(lim = c(0,50))
+
+ggplot(data = wine_data, aes(x = free.sulfur.dioxide)) + geom_histogram(binwidth = 1, color = 'black',fill = 'grey') +
+  scale_x_continuous(breaks = seq(0,80,5), lim = c(0,50))
+```
+
+
+### Total Sulphur Dioxide also follows a similar pattern as free.sulfur.dioxide.
+
+```{r}
+ggplot(wine_data, aes( x = 1, y = total.sulfur.dioxide )) + geom_boxplot(alpha = 0.2, color = 'red' ) + scale_y_continuous(lim = c(0,200))
+
+ggplot(data = wine_data, aes(x = total.sulfur.dioxide)) + geom_histogram(binwidth = 5, color = 'black',fill = 'grey') +
+  scale_x_continuous(lim = c(0,200))
+```
+
+
+### The Density variable is nearly  Normal Distributed.
+
+```{r}
+ggplot(wine_data, aes( x = 1, y = density)) + geom_boxplot(alpha = 0.2, color = 'red' )
+
+ggplot(data = wine_data, aes(x = density)) + geom_histogram(binwidth = 0.001, color = 'black',fill = 'grey')
+```
+
+
+### pH also has a Normally distributed shape.
+
+```{r}
+ggplot(wine_data, aes( x = 1, y = pH)) + geom_boxplot(alpha = 0.2, color = 'red' )
+
+ggplot(data = wine_data, aes(x = pH)) + geom_histogram(binwidth = 0.1, color = 'black',fill = 'grey')
+```
+
+
+
+### Sulphates also exhibit a similar long tailed distribution like Chlorides or Free/Total Sulphur Dioxide. It has relatively less outliers.
+
+```{r}
+ggplot(wine_data, aes( x = 1, y = sulphates)) + geom_boxplot(alpha = 0.2, color = 'red' ) + scale_y_continuous(lim = c(0.3,2))
+
+ggplot(data = wine_data, aes(x = sulphates)) + geom_histogram(binwidth = 0.1, color = 'black',fill = 'grey') +
+  scale_x_continuous(lim = c(0.3,2))
+```
+
+
+### Alcohol also follows a skewed distribution but here the skewness is less than that of Chlorides or Residual Sugars.
+
+```{r}
+ggplot(wine_data, aes( x = 1, y = alcohol)) + geom_boxplot(alpha = 0.2, color = 'red' ) +scale_y_continuous(lim = c(6,18))
+
+ggplot(data = wine_data, aes(x = alcohol)) + geom_histogram(binwidth = 0.1, color = 'black',fill = 'grey') + scale_x_continuous(lim = c(6,18))
+
+```
+
+### Plotting correlation matrix
+# We first remove unwanted using columnsdplyr::select(-X) %>%
+
+```{r}
+red_wine <- cor(wine_data %>%dplyr::select(-type) %>%mutate())
+red_wine
+```
+
+
+
+### Correlation matrix
+```{r}
+ggcorrplot(red_wine,method = 'circle',colors = c("#6D9EC1", "white", "#E46726"))
+```
+
+### From the above correlation plot we can say that:
+1.Fixed Acidity seems to have very little to no effect on quality.
+2.Volatile Acidity have a negative correlation with the quality.
+3.Citric Acid has positive correlation with the quality.
+4.Residual sugar almost has no effect on the wine quality.
+5.Even though it's a weak correlation, but Chloride has negative correlation with quality of wines.
+6.Even though it's a weak correlation, but Density has negative correlation with quality of wines.
+7.Sulphates is weakly positively correlation with quality of wine
+8.Better wines seem to have higher alcohol percentages.
+ 
+
+
+### Constructing a binary response according to the following rule
+
+```{r}
+wine_data$Y <- ifelse(wine_data$quality >= 7, 1, 0)
+head(wine_data %>% mutate(across(c("Y"), factor)))
+sapply(lapply(wine_data, unique), length)
+
+```
+
+# Applying Logistic Regression on wine data.
+
+### Removing columns to apply logistic regression model on data.No other variable is removed as seen from the correlation plot, there are no significant interaction effects
+
+```{r}
+wine_data_1 = subset(wine_data, select = -c(quality,type))
+```
+
+
+### Building a logistic regression model
+
+```{r}
+log_model <- glm(Y ~ ., family = binomial(link = "logit"), data = wine_data_1)
+summary(log_model)
+```
+
+
+
+### Observed Classes
+
+```{r}
+y <- na.omit(wine_data_1)$Y 
+```
+
+
+### Predicting the response variable using the logistic regression model.
+
+```{r}
+wine_predict <- predict(log_model, newdata = wine_data_1 ,type = "response") 
+head(wine_predict)
+```
+
+
+### classification based on 0.5 threshold
+
+```{r}
+classes <- ifelse(wine_predict > 0.5, 1, 0) 
+```
+ 
+
+
+### Confusion Matrix
+
+```{r}
+conf_matrix <- table("actual" = y, "predicted" = classes)
+conf_matrix
+```
+
+
+### Calibration curve
+
+```{r}
+#y10 <- ifelse(y == 1, 1, 0)
+```
+
+
+```{r}
+rms::val.prob(wine_predict, y)
+```
+### The model appears to be well calibrated for probailities below 0.6 and begins to deviate beyond this point.
+
+## Effect Plots
+
+```{r}
+pdp::partial(log_model,pred.var = "alcohol",prob = TRUE, plot = TRUE, rug = TRUE,
+        plot.engine = "ggplot2")
+```
+### Alcohol content does have an effect on quality, when alcohol percentage is greater than 14.2 then we see y hat to be > 0.5 translating to quality >= 7.
+### The above relationship as seen in the plot is non linear though.
+### In logistical regression, probailities are calculated by taking the exponent of the coefficients therefore the graph is non linear
+
+
+### The above modelling approach is not advised as we have considered only 2 levels in quality i.e when quality is > 7 we are stating it as 1 and otherwise 0 whereas the actualy red wine data set has 6 levels of quality which are ordered, making the overall approach not conducive. We can try to fit an ordinal logistical model on the data instead.
+
+# Ordinal Logistic Regression
+
+```{r}
+wine_data_2 <- subset(wine_data, select = -c(type, Y))
+ordinal_model <- orm(quality ~.,data = wine_data_2)
+```
+
+### Creating a custom function for prediction
+```{r}
+pred_func <- function(object, newdata) {
+  colMeans(predict(object, newdata = newdata, type = "fitted.ind"))
+}
+```
+
+## Alcohol
+```{r}
+pred_alcohol <- partial(ordinal_model, pred.var = "alcohol", pred.fun = pred_func)
+pred_alcohol <- pred_alcohol[pred_alcohol$yhat.id >= "quality=7",]
+
+ggplot(pred_alcohol, aes(x = alcohol, y = yhat, linetype = yhat.id, color = yhat.id)) +
+  geom_line(size = 2) +
+  xlab("Alcohol") +
+  ylab("Individual Dependence")
+```
+## Fixed Acidity
+```{r}
+pred_fd <- partial(ordinal_model, pred.var = "fixed.acidity", pred.fun = pred_func)
+pred_fd <- pred_fd[pred_fd$yhat.id >= "quality=7",]
+
+ggplot(pred_fd, aes(x = fixed.acidity, y = yhat, linetype = yhat.id, color = yhat.id)) +
+  geom_line(size = 2) +
+  xlab("Fixed Acidity") +
+  ylab("Individual Dependence")
+```
+
+## Volatile Acidity
+```{r}
+pred_vd <- partial(ordinal_model, pred.var = "volatile.acidity", pred.fun = pred_func)
+pred_vd <- pred_vd[pred_vd$yhat.id >= "quality=7",]
+
+ggplot(pred_vd, aes(x = volatile.acidity, y = yhat, linetype = yhat.id, color = yhat.id)) +
+  geom_line(size = 2) +
+  xlab("Volatile Acidity") +
+  ylab("Individual Dependence")
+```
+## Citric Acid
+```{r}
+pred_ca <- partial(ordinal_model, pred.var = "citric.acid", pred.fun = pred_func)
+pred_ca <- pred_ca[pred_ca$yhat.id >= "quality=7",]
+
+ggplot(pred_ca, aes(x = citric.acid, y = yhat, linetype = yhat.id, color = yhat.id)) +
+  geom_line(size = 2) +
+  xlab("Citric Acid") +
+  ylab("Individual Dependence")
+```
+
+
+
+## Residual Sugar
+```{r}
+pred_rs <- partial(ordinal_model, pred.var = "residual.sugar", pred.fun = pred_func)
+pred_rs <- pred_rs[pred_rs$yhat.id >= "quality=7",]
+
+ggplot(pred_rs, aes(x = residual.sugar, y = yhat, linetype = yhat.id, color = yhat.id)) +
+  geom_line(size = 2) +
+  xlab("Residual Sugar") +
+  ylab("Individual Dependence")
+```
+
+
+
+## Chlorides
+```{r}
+pred_cl <- partial(ordinal_model, pred.var = "chlorides", pred.fun = pred_func)
+pred_cl <- pred_cl[pred_cl$yhat.id >= "quality=7",]
+
+ggplot(pred_cl, aes(x = chlorides, y = yhat, linetype = yhat.id, color = yhat.id)) +
+  geom_line(size = 2) +
+  xlab("Chlorides") +
+  ylab("Individual Dependence")
+```
+## Free Sulfur Dioxide
+```{r}
+pred_fsd <- partial(ordinal_model, pred.var = "free.sulfur.dioxide", pred.fun = pred_func)
+pred_fsd <- pred_fsd[pred_fsd$yhat.id >= "quality=7",]
+
+ggplot(pred_fsd, aes(x = free.sulfur.dioxide, y = yhat, linetype = yhat.id, color = yhat.id)) +
+  geom_line(size = 2) +
+  xlab("Free Sulfur Dioxide") +
+  ylab("Individual Dependence")
+```
+
+
+## Total Sulfur Dioxide
+```{r}
+pred_tsd <- partial(ordinal_model, pred.var = "total.sulfur.dioxide", pred.fun = pred_func)
+pred_tsd <- pred_tsd[pred_tsd$yhat.id >= "quality=7",]
+
+ggplot(pred_tsd, aes(x = total.sulfur.dioxide, y = yhat, linetype = yhat.id, color = yhat.id)) +
+  geom_line(size = 2) +
+  xlab("Total Sulfur Dioxide") +
+  ylab("Individual Dependence")
+```
+
+## Density
+```{r}
+pred_den <- partial(ordinal_model, pred.var = "density", pred.fun = pred_func)
+pred_den <- pred_den[pred_den$yhat.id >= "quality=7",]
+
+ggplot(pred_den, aes(x = density, y = yhat, linetype = yhat.id, color = yhat.id)) +
+  geom_line(size = 2) +
+  xlab("Density") +
+  ylab("Individual Dependence")
+```
+
+## pH
+```{r}
+pred_pH <- partial(ordinal_model, pred.var = "pH", pred.fun = pred_func)
+pred_pH <- pred_pH[pred_pH$yhat.id >= "quality=7",]
+
+ggplot(pred_pH, aes(x = pH, y = yhat, linetype = yhat.id, color = yhat.id)) +
+  geom_line(size = 2) +
+  xlab("pH") +
+  ylab("Individual Dependence")
+```
+
+## Sulphates
+```{r}
+pred_su <- partial(ordinal_model, pred.var = "sulphates", pred.fun = pred_func)
+pred_su <- pred_su[pred_su$yhat.id >= "quality=7",]
+
+ggplot(pred_su, aes(x = sulphates, y = yhat, linetype = yhat.id, color = yhat.id)) +
+  geom_line(size = 2) +
+  xlab("Sulphates") +
+  ylab("Individual Dependence")
+```
+### As seen in the above plots for probability dependence on quatilty >= 7 (i.e quality = 7 & 8) for all the variables, we can see the combined impact for both the curves are maximum for 
+a) Alcohol
+b) Sulphates 
+c) Volatile Acidity 
+### in the respective order (largest to smallest in top 3)
+
+
+### Calculating the predicted value for the observation x0 
+
+```{r}
+x0 <- data.frame(
+  fixed.acidity =  7.3000,
+  volatile.acidity =  0.6500,
+  citric.acid =  0.0000,
+  residual.sugar =  1.2000,
+  chlorides =  0.0650,
+  free.sulfur.dioxide =  15.0000,
+  total.sulfur.dioxide =  21.0000,
+  density =  0.9946,
+  pH =  3.3900,
+  sulphates =  0.4700,
+  alcohol = 10.0000)
+```
+
+### Predicting Values
+```{r}
+predict(ordinal_model, newdata = x0, type = "fitted")
+```
+```{r}
+predict(ordinal_model, newdata = x0, type = "fitted.ind")
+
+```
+- Pr(quality == 7|x0) = 0.03018
+- Pr(quality >= 7|x0) = 0.03180
+
+### There are no values where quality equals to 9 in our red wine data set, hence we see no corresponding estimates in the results above. Therefore the probabilities can't be determined.
+
+### Applicability discussion for white wine data
+
+Asking to use the red wine model on white wine seems like a reasonable request because these are two subsets of the same data. However, because the two subsets represent two different categories of wine, we will have to do an EDA on the variables of white wine and contrast the variable distributions with the red wine data set. 
+In practice, we would like to validate the distributions for the two categories before giving the recommendation to our boss.If the variable distrubutions are not aligned, we will have to build a new model for white wine data.
+
